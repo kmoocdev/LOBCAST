@@ -1,3 +1,6 @@
 /data/
 .idea
 /thrash/
+/wandb/
+__pycache__/
+/lightning_logs

@@ -130,6 +130,7 @@ def lobster_testing(src_data, out_data):
     target_dataset_meta = cst.DatasetFamily.LOB
 
     model_todo = [cst.Models.BINCTABL]
+    #model_todo = [cst.Models.MLP]
     models_to_avoid = []
     seeds = [500]
 
@@ -143,14 +144,17 @@ def lobster_testing(src_data, out_data):
 def fi_testing(src_data, out_data):
     dataset_type = cst.DatasetFamily.FI  # "FI"
 
-    model_todo = [cst.Models.BINCTABL]
+    #model_todo = [cst.Models.BINCTABL]
+    model_todo = [cst.Models.MLP]
     models_to_avoid = []
     seeds = [500]
+    #seeds = [0]
     kset = [cst.FI_Horizons.K5]
 
     launch_FI_test(seeds, model_todo, models_to_avoid, dataset_type, kset, src_data, out_data)
 
 
 if __name__ == "__main__":
-    src_data, out_data = "data/saved_models/", "data/saved_models/"
+    #src_data, out_data = "data/saved_models/", "data/saved_models/"
+    src_data, out_data = "data/saved_models/LOB-CLASSIFIERS-(FI-EXPERIMENTS)/", "data/saved_models/"
     fi_testing(src_data, out_data)

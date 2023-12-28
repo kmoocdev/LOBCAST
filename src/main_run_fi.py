@@ -42,8 +42,8 @@ def experiment_fi(execution_plan, run_name_prefix="FI-EXPERIMENTS"):
                         cf.CHOSEN_DATASET = cst.DatasetFamily.FI
 
                     cf.CHOSEN_MODEL = mod
-                    cf.IS_WANDB = True
-                    cf.IS_TUNE_H_PARAMS = True
+                    cf.IS_WANDB = False
+                    cf.IS_TUNE_H_PARAMS = False
 
                     tlu.run(cf)
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     EXE_PLAN = {
         cst.Servers.ANY: [
             (cst.Models.MLP,      {'k': [cst.FI_Horizons.K5], 'seed': [500]}),
-            (cst.Models.BINCTABL, {'k': [cst.FI_Horizons.K5], 'seed': 'all'})
+            (cst.Models.BINCTABL, {'k': [cst.FI_Horizons.K5], 'seed': [0]})
         ]
     }
 

@@ -63,6 +63,9 @@ class NNEngine(pl.LightningModule):
         self.best_epoch_train_loss = 0
         self.cur_decay_index = 0
         self.LR_DECAY_CTABL = [0.005, 0.001, 0.0005, 0.0001, 0.00008, 0.00001]
+        self.training_step_outputs = []
+        self.validation_step_outputs = []
+        self.test_step_outputs = []
 
     def forward(self, x):
         out = self.neural_architecture(x)
@@ -79,14 +82,17 @@ class NNEngine(pl.LightningModule):
         out, logits = self(x)
 
         loss = self.loss_fn(out, y)
+        self.training_step_outputs.append({'loss': loss})
         return loss
 
     def validation_step(self, batch, batch_idx):
         prediction_ind, y, loss_val, stock_names, logits = self.__validation_and_testing(batch)
+        self.validation_step_outputs.append((prediction_ind, y, loss_val, stock_names, logits))
         return prediction_ind, y, loss_val, stock_names, logits
 
     def test_step(self, batch, batch_idx):
         prediction_ind, y, loss_val, stock_names, logits = self.__validation_and_testing(batch)
+        self.test_step_outputs.append((prediction_ind, y, loss_val, stock_names, logits))
         return prediction_ind, y, loss_val, stock_names, logits
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
@@ -103,7 +109,8 @@ class NNEngine(pl.LightningModule):
         # print("Inference for the model:", elapsed, "ms")
         return elapsed
 
-    def training_epoch_end(self, validation_step_outputs):
+    def on_training_epoch_end(self):
+        validation_step_outputs = self.training_step_outputs
         losses = [el["loss"].item() for el in validation_step_outputs]
         sum_losses = float(np.sum(losses))
 
@@ -114,11 +121,13 @@ class NNEngine(pl.LightningModule):
 
         if self.remote_log is not None:
             self.remote_log.log({var_name: sum_losses})
+        self.training_step_outputs.clear()
 
         # self.cf.METRICS_JSON.add_testing_metrics(self.cf.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, {'MAX-EPOCHS': self.current_epoch})
         # self.remote_log({"current_epoch": self.current_epoch})
 
-    def validation_epoch_end(self, validation_step_outputs):
+    def on_validation_epoch_end(self):
+        validation_step_outputs = self.validation_step_outputs
         preds, truths, loss_vals, stock_names, logits = self.get_prediction_vectors(validation_step_outputs)
 
         model_step = cst.ModelSteps.VALIDATION_EPOCH
@@ -129,12 +138,14 @@ class NNEngine(pl.LightningModule):
 
         # for saving best model
         validation_string = "{}_{}_{}".format(model_step.value, self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, cst.Metrics.F1.value)
-        self.log(validation_string, val_dict[validation_string], prog_bar=True)  # validation_!SRC!_F1
+        self.log(validation_string, val_dict[validation_string], prog_bar=True, sync_dist=True)  # validation_!SRC!_F1
 
         if self.remote_log is not None:  # log to wandb
             self.remote_log.log(val_dict)
+        self.validation_step_outputs.clear()
 
-    def test_epoch_end(self, test_step_outputs):
+    def on_test_epoch_end(self):
+        test_step_outputs = self.test_step_outputs
         preds, truths, loss_vals, stock_names, logits = self.get_prediction_vectors(test_step_outputs)
 
         model_step = self.testing_mode
@@ -177,6 +188,8 @@ class NNEngine(pl.LightningModule):
         if self.remote_log is not None:  # log to wandb
             val_dict["current_epoch"] = self.current_epoch
             self.remote_log.log(val_dict)
+
+        self.test_step_outputs.clear()
 
     # COMMON
     def __validation_and_testing(self, batch):
