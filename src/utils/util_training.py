@@ -12,6 +12,7 @@ import wandb
 from src.config import Configuration
 from src.utils.utils_generic import get_index_from_window
 from src.metrics.metrics_learning import compute_sk_cm, compute_metrics
+from src.metrics.metrics_learning import classification_report, confusion_matrix
 
 
 class NNEngine(pl.LightningModule):
@@ -155,7 +156,16 @@ class NNEngine(pl.LightningModule):
         self.__log_wandb_cm(truths, preds, model_step, self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name)  # cm to log
 
         val_dict = compute_metrics(truths, preds, model_step, loss_vals, self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name)  # dict to log
-        self.config.METRICS_JSON.update_metrics(self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, val_dict)
+        classification_report_str = classification_report(truths, preds, digits=4)
+        classification_report_dict = { 'classification_report': classification_report_str }
+        self.config.METRICS_JSON.update_metrics(self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, classification_report_dict)
+        print(classification_report_str)
+
+        confusion_matrix_data = confusion_matrix(truths, preds, normalize='true')
+        confusion_matrix_dict = { 'confusion_matrix': str(confusion_matrix_data.tolist()) }
+        self.config.METRICS_JSON.update_metrics(self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, confusion_matrix_dict)
+        print(confusion_matrix_data)
+
 
         logits_dict = {'LOGITS': str(logits.tolist())}
         self.config.METRICS_JSON.update_metrics(self.config.CHOSEN_STOCKS[cst.STK_OPEN.TRAIN].name, logits_dict)
